@@ -1,0 +1,436 @@
+<!-- templates/chat.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - {{ username }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #36393f;
+            color: #dcddde;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .chat-container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background-color: #2f3136;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #202225;
+        }
+        
+        .server-name {
+            padding: 12px 16px;
+            background-color: #27292c;
+            border-bottom: 1px solid #202225;
+            font-weight: 600;
+            color: #fff;
+        }
+        
+        .channels {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+        
+        .channel-category {
+            color: #8e9297;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin: 16px 8px 4px 8px;
+            letter-spacing: 0.5px;
+        }
+        
+        .channel {
+            display: flex;
+            align-items: center;
+            padding: 6px 8px;
+            margin: 2px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.15s;
+        }
+        
+        .channel:hover {
+            background-color: #3c3f45;
+        }
+        
+        .channel.active {
+            background-color: #5865f2;
+            color: #fff;
+        }
+        
+        .channel-icon {
+            margin-right: 6px;
+            font-size: 18px;
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-header {
+            height: 48px;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            background-color: #36393f;
+            border-bottom: 1px solid #202225;
+        }
+        
+        .channel-name {
+            font-weight: 600;
+            color: #fff;
+        }
+        
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            background-color: #36393f;
+        }
+        
+        .message {
+            display: flex;
+            margin-bottom: 16px;
+            padding: 4px 0;
+        }
+        
+        .message:hover {
+            background-color: #32353b;
+            margin: 0 -16px 16px -16px;
+            padding: 4px 16px;
+        }
+        
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #5865f2, #3c45a5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-right: 16px;
+            flex-shrink: 0;
+        }
+        
+        .message-content {
+            flex: 1;
+        }
+        
+        .message-header {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 4px;
+        }
+        
+        .message-author {
+            font-weight: 500;
+            color: #fff;
+            margin-right: 8px;
+        }
+        
+        .message-timestamp {
+            font-size: 12px;
+            color: #72767d;
+        }
+        
+        .message-text {
+            line-height: 1.375;
+            color: #dcddde;
+        }
+        
+        .message-input-container {
+            padding: 16px;
+            background-color: #40444b;
+            border-top: 1px solid #202225;
+        }
+        
+        .message-input {
+            width: 100%;
+            background-color: #40444b;
+            border: none;
+            outline: none;
+            color: #dcddde;
+            font-size: 14px;
+            padding: 11px;
+            border-radius: 8px;
+            background-color: #383a40;
+        }
+        
+        .message-input::placeholder {
+            color: #72767d;
+        }
+        
+        .user-info {
+            padding: 8px;
+            background-color: #292b2f;
+            border-top: 1px solid #202225;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .create-channel-btn {
+            margin: 8px;
+            padding: 8px;
+            background-color: #5865f2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        
+        .create-channel-btn:hover {
+            background-color: #4752c4;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            background-color: #5865f2;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 4px;
+            z-index: 1000;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="notification" id="notification"></div>
+    
+    <div class="chat-container">
+        <div class="sidebar">
+            <div class="server-name">💬 My Chat Server</div>
+            
+            <div class="channels">
+                <div class="channel-category">Text Channels</div>
+                <div id="channels-list">
+                    {% for channel in channels %}
+                    <div class="channel" data-channel-id="{{ channel.id }}">
+                        <span class="channel-icon">#</span>
+                        <span class="channel-name">{{ channel.name }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <button class="create-channel-btn" onclick="createChannel()">+ Create Channel</button>
+            
+            <div class="user-info">
+                🟢 {{ username }}
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <div class="chat-header">
+                <span class="channel-name" id="current-channel-name">Select a channel</span>
+            </div>
+            
+            <div class="messages-container" id="messages">
+                <div style="text-align: center; color: #72767d; padding: 50px;">
+                    Select a channel to start chatting
+                </div>
+            </div>
+            
+            <div class="message-input-container">
+                <input 
+                    type="text" 
+                    class="message-input" 
+                    id="messageInput" 
+                    placeholder="Type a message..."
+                    disabled
+                >
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const username = "{{ username }}";
+        let currentChannelId = null;
+        
+        // DOM elements
+        const messagesContainer = document.getElementById('messages');
+        const messageInput = document.getElementById('messageInput');
+        const currentChannelName = document.getElementById('current-channel-name');
+        const channelsList = document.getElementById('channels-list');
+        const notification = document.getElementById('notification');
+        
+        // Connect to server
+        socket.on('connect', () => {
+            console.log('Connected to server');
+            socket.emit('join_app', { username: username });
+        });
+        
+        // Handle app join confirmation
+        socket.on('joined_app', (data) => {
+            console.log('Joined app successfully');
+        });
+        
+        // Handle channel join
+        socket.on('channel_joined', (data) => {
+            currentChannelId = data.channel_id;
+            currentChannelName.textContent = `# ${data.channel_name}`;
+            messageInput.disabled = false;
+            messageInput.placeholder = `Message #${data.channel_name}`;
+            
+            // Update active channel styling
+            document.querySelectorAll('.channel').forEach(ch => ch.classList.remove('active'));
+            document.querySelector(`[data-channel-id="${data.channel_id}"]`).classList.add('active');
+            
+            // Load messages
+            displayMessages(data.messages);
+        });
+        
+        // Handle new messages
+        socket.on('new_message', (data) => {
+            if (data.channel_id === currentChannelId) {
+                addMessage(data);
+            }
+        });
+        
+        // Handle user join/leave notifications
+        socket.on('user_joined', (data) => {
+            if (data.channel_id === currentChannelId) {
+                showNotification(`${data.username} joined the channel`);
+            }
+        });
+        
+        socket.on('user_left', (data) => {
+            if (data.channel_id === currentChannelId) {
+                showNotification(`${data.username} left the channel`);
+            }
+        });
+        
+        // Handle new channel creation
+        socket.on('channel_created', (data) => {
+            addChannelToList(data);
+            showNotification(`New channel #${data.name} created!`);
+        });
+        
+        // Handle errors
+        socket.on('error', (data) => {
+            alert(data.message);
+        });
+        
+        // Channel selection
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.channel')) {
+                const channelElement = e.target.closest('.channel');
+                const channelId = parseInt(channelElement.dataset.channelId);
+                
+                if (currentChannelId !== channelId) {
+                    if (currentChannelId) {
+                        socket.emit('leave_channel', { channel_id: currentChannelId });
+                    }
+                    socket.emit('join_channel', { channel_id: channelId });
+                }
+            }
+        });
+        
+        // Send message
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && currentChannelId && messageInput.value.trim()) {
+                socket.emit('send_message', {
+                    channel_id: currentChannelId,
+                    content: messageInput.value.trim()
+                });
+                messageInput.value = '';
+            }
+        });
+        
+        // Helper functions
+        function displayMessages(messages) {
+            messagesContainer.innerHTML = '';
+            messages.forEach(message => addMessage(message));
+        }
+        
+        function addMessage(message) {
+            const messageElement = document.createElement('div');
+            messageElement.className = 'message';
+            
+            const timestamp = new Date(message.timestamp).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            messageElement.innerHTML = `
+                <div class="message-avatar">
+                    ${message.username.charAt(0).toUpperCase()}
+                </div>
+                <div class="message-content">
+                    <div class="message-header">
+                        <span class="message-author">${message.username}</span>
+                        <span class="message-timestamp">${timestamp}</span>
+                    </div>
+                    <div class="message-text">${escapeHtml(message.content)}</div>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(messageElement);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        function addChannelToList(channel) {
+            const channelElement = document.createElement('div');
+            channelElement.className = 'channel';
+            channelElement.dataset.channelId = channel.id;
+            channelElement.innerHTML = `
+                <span class="channel-icon">#</span>
+                <span class="channel-name">${channel.name}</span>
+            `;
+            channelsList.appendChild(channelElement);
+        }
+        
+        function createChannel() {
+            const channelName = prompt('Enter channel name:');
+            if (channelName && channelName.trim()) {
+                const description = prompt('Enter channel description (optional):') || '';
+                socket.emit('create_channel', {
+                    name: channelName.trim().toLowerCase().replace(/\s+/g, '-'),
+                    description: description.trim()
+                });
+            }
+        }
+        
+        function showNotification(message) {
+            notification.textContent = message;
+            notification.style.display = 'block';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
